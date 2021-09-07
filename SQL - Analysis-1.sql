@@ -4,52 +4,40 @@ sums of total_submissions, total_accepted_submissions, total_views, and total_un
 result if all four sums are 0
 */
 
-SELECT  B.college_id, 
-        A.name, 
-        A.hacker_id, 
-        A.Contest_ID 
-INTO #College
-FROM Contests A
-INNER JOIN Colleges B ON A.contest_id = B.Contest_Id
+-- 
 
-SELECT  B.Challenge_ID, 
-        A.name, 
-        A.hacker_id, 
-        A.Contest_ID 
-INTO #Challenge 
-FROM #College A
-INNER JOIN Challenges B ON A.College_ID = B.College_ID
+SELECT con.CONTEST_ID,
+       con.HACKER_ID,
+       con.NAME,
+       Sum(TOTAL_SUBMISSIONS),
+       Sum(TOTAL_ACCEPTED_SUBMISSIONS),
+       Sum(TOTAL_VIEWS),
+       Sum(TOTAL_UNIQUE_VIEWS)
+FROM   CONTESTS con
+       JOIN COLLEGES col
+         ON con.CONTEST_ID = col.CONTEST_ID
+       JOIN CHALLENGES cha
+         ON col.COLLEGE_ID = cha.COLLEGE_ID
+       LEFT JOIN (SELECT CHALLENGE_ID,
+                         Sum(TOTAL_VIEWS)        AS total_views,
+                         Sum(TOTAL_UNIQUE_VIEWS) AS total_unique_views
+                  FROM   VIEW_STATS
+                  GROUP  BY CHALLENGE_ID) vs
+              ON cha.CHALLENGE_ID = vs.CHALLENGE_ID
+       LEFT JOIN (SELECT CHALLENGE_ID,
+                         Sum(TOTAL_SUBMISSIONS)          AS total_submissions,
+                         Sum(TOTAL_ACCEPTED_SUBMISSIONS) AS
+                         total_accepted_submissions
+                  FROM   SUBMISSION_STATS
+                  GROUP  BY CHALLENGE_ID) ss
+              ON cha.CHALLENGE_ID = ss.CHALLENGE_ID
+GROUP  BY con.CONTEST_ID,
+          con.HACKER_ID,
+          con.NAME
+HAVING Sum(TOTAL_SUBMISSIONS) != 0
+        OR Sum(TOTAL_ACCEPTED_SUBMISSIONS) != 0
+        OR Sum(TOTAL_VIEWS) != 0
+        OR Sum(TOTAL_UNIQUE_VIEWS) != 0
+ORDER  BY CONTEST_ID; 
 
-SELECT  B.challenge_id, 
-        B.total_views, 
-        B.total_unique_Views,
-        A.name, 
-        A.hacker_id,
-        A.Contest_ID
-INTO #Stats
-FROM #Challenge A
-INNER JOIN View_Stats B ON A.Challenge_id = B.Challenge_Id
-
-SELECT  A.Contest_ID, 
-        A.Hacker_ID, 
-        A.Name, 
-        SUM(B.Total_Submissions),
-        B.total_accepted_submissions,
-        A.total_views,
-        A.total_unique_views
-FROM #Stats A
-INNER JOIN Submission_Stats B
-ON A.Challenge_ID = B.Challenge_ID
-GROUP BY A.Contest_ID, 
-        A.Hacker_ID, 
-        A.Name, 
-        B.Total_Submissions,
-        B.total_accepted_submissions,
-        A.total_views,
-        A.total_unique_views
-HAVING (SUM(B.Total_Submissions) <> 0 
-OR SUM(B.total_accepted_submissions) <> 0 
-OR SUM(A.total_views) <> 0
-OR SUM(A.total_unique_views) <> 0)
-ORDER BY A.Contest_ID
 
